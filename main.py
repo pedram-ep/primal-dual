@@ -32,6 +32,18 @@ class LinearModel:
             self.variable_signs.append(input(f"Enter the sign of x{i+1} (>=, free, <=): "))
 
 
+    def test_example(self):
+        self.type = 'min'
+
+        self.variable_num = 3
+        self.constraint_num = 5
+        self.c_vector = [3, -2, 4]
+        self.a_matrix = [[3, 5, 4], [6, 1, 3], [7, -2, -1], [1, -2, 5], [4, 7, -2]]
+        self.constraint_signs = ['>=', '>=', '<=', '>=', '>=']
+        self.b_vector = [7, 4, 10, 3, 2]
+        self.variable_signs = ['>=', '>=', '>=']
+
+
     def dual_calculator(self):
         dual = LinearModel()
         dual.type = 'min' if self.type == 'max' else 'max'
@@ -60,25 +72,68 @@ class LinearModel:
         return dual
     
     def print_model(self):
-        if self.type == 'max':
-            print("\nmax z = ", end='')
-        elif self.type == 'min':
-            print("\nmin z = ", end='')
+        # printing the objective function
+        print("\nmax z = " if self.type == 'max' else "\nmin z = ", end='')
         
         for i in range(self.variable_num):
-            print(f"{self.c_vector[i]}x{i+1} + ", end='')
+            if i+1 < self.variable_num:
+                print(f"{self.c_vector[i]}x{i+1} + ", end='')
+            else:
+                print(f"{self.c_vector[i]}x{i+1}", end='')
         
+        # printing the constraints
         print("\ns.t.")
 
         for i in range(self.constraint_num):
             for j in range(self.variable_num):
-                print(f"{self.a_matrix[i][j]}x{j+1} + ", end='')
+                if j+1 < self.variable_num:
+                    print(f"{self.a_matrix[i][j]}x{j+1} + ", end='')
+                else:
+                    print(f"{self.a_matrix[i][j]}x{j+1} ", end='')
             print(f"{self.constraint_signs[i]} {self.b_vector[i]}")
-    
-# Example Usage
+        
 
+        # printing the sign of the variables
+        non_negative_variables = []
+        non_positive_variables = []
+        free_variables = []
+        for i in range(len(self.variable_signs)):
+            if self.variable_signs[i] == '>=':
+                non_negative_variables.append(f"x{i+1}")
+            elif self.variable_signs[i] == '<=':
+                non_positive_variables.append(f"x{i+1}")
+            else:
+                free_variables.append(f"x{i+1}")
+        print('and ', end='')
+        for i in range(len(non_negative_variables)):
+            print(f"{non_negative_variables[i]}", end=' ')
+            if i != len(non_negative_variables) - 1:
+                print(', ', end='')
+        if len(non_negative_variables) > 0:
+                if len(free_variables) > 0 or len(non_positive_variables) > 0:
+                    print(">= 0 and ", end='')
+                else:
+                    print(">= 0", end='')
+        for i in range(len(non_positive_variables)):
+            print(f"{non_positive_variables[i]}", end=' ')
+            if i != len(non_positive_variables) - 1:
+                print(', ', end='')
+        if len(non_positive_variables) > 0:
+                if len(free_variables) > 0:
+                    print("<= 0 and ", end='')
+                else:
+                    print("<= 0", end='')
+        for i in range(len(free_variables)):
+            print(f"{free_variables[i]} is free", end=' ')
+            if i != len(free_variables) - 1:
+                print(', ', end='')
+        if len(free_variables) > 0:
+                print("is free", end='')
+        print()
+
+# example Usage
 model = LinearModel()
-model.input()
+model.test_example()
 model.print_model()
 dual = model.dual_calculator()
 dual.print_model()
