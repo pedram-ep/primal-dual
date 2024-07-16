@@ -1,16 +1,24 @@
 class LinearModel:
     def __init__(self):
-        self.type = None
+        self.optimization_type = None
+        self.type = 'primal'
         self.variable_num = 0
         self.constraint_num = 0
+
+        # variable coeffs in the objective function
         self.c_vector = []
+
+        # constraints coeffs
         self.a_matrix = []
+
+        # constraints RHS
         self.b_vector = []
+
         self.constraint_signs = []
         self.variable_signs = []
 
     def input(self):
-        self.type = input("Enter the type of the problem (max/min): ")
+        self.optimization_type = input("Enter the type of the problem (max/min): ")
         self.variable_num = int(input("Enter the number of variables: "))
         self.constraint_num = int(input("Enter the number of constraints: "))
 
@@ -33,26 +41,58 @@ class LinearModel:
 
 
     def test_example(self):
-        self.type = 'min'
+        self.optimization_type = 'min'
 
         self.variable_num = 3
         self.constraint_num = 5
         self.c_vector = [3, -2, 4]
         self.a_matrix = [[3, 5, 4], [6, 1, 3], [7, -2, -1], [1, -2, 5], [4, 7, -2]]
-        self.constraint_signs = ['>=', '>=', '<=', '>=', '>=']
+        self.constraint_signs = ['>=', '>=', '<=', '>=', '=']
         self.b_vector = [7, 4, 10, 3, 2]
-        self.variable_signs = ['>=', '>=', '>=']
+        self.variable_signs = ['>=', '>=', 'free']
 
+    def min_normalizer(self):
+        for i in range(self.constraint_num):
+                if self.constraint_signs[i] == '<=':
+                    self.constraint_signs[i] = '>='
+                    for j in range(self.variable_num):
+                        self.a_matrix[i][j] *= -1
+                    self.b_vector[i] *= -1
+    
+    def max_normalizer(self):
+        for i in range(self.constraint_num):
+                if self.constraint_signs[i] == '>=':
+                    self.constraint_signs[i] = '<='
+                    for j in range(self.variable_num):
+                        self.a_matrix[i][j] *= -1
+                    self.b_vector[i] *= -1
+
+    def model_normalizer(self):
+        if self.optimization_type == 'min':
+            self.min_normalizer()
+        elif self.optimization_type == 'max':
+            self.max_normalizer()
 
     def dual_calculator(self):
+        # normalizing the model
+        self.model_normalizer()
+
+        # creating the dual model
         dual = LinearModel()
-        dual.type = 'min' if self.type == 'max' else 'max'
+        dual.type = 'dual'
+        
+        # changing the type of optimization
+        dual.optimization_type = 'min' if self.optimization_type == 'max' else 'max'
+
+        # swapping the number of constraints and variables
         dual.variable_num = self.constraint_num
         dual.constraint_num = self.variable_num
 
+        # the c vector of the dual is the b vector of the primal
         for i in range(dual.variable_num):
             dual.c_vector.append(self.b_vector[i])
 
+        # the a matrix of the dual is the transpose of the a matrix of the primal
         for i in range(dual.constraint_num):
             constraint = []
             for j in range(dual.variable_num):
@@ -61,37 +101,54 @@ class LinearModel:
             dual.constraint_signs.append('=')
             dual.b_vector.append(self.c_vector[i])
         
-        for i in range(dual.constraint_num):
-            if self.variable_signs[i] == '<=':
-                dual.variable_signs.append('>=') 
-            elif self.variable_signs[i] == '>=':
-                dual.variable_signs.append('<=') 
-            else:
+        # setting the dual model variable signs
+        # min to max
+        for i in range(dual.variable_num):
+            if self.constraint_signs[i] == '=':
                 dual.variable_signs.append('free')
+            elif self.constraint_signs[i] == '>=':
+                if self.optimization_type == 'min':
+                    dual.variable_signs.append('>=')
+                else:
+                    dual.variable_signs.append('<=')
+            elif self.constraint_signs[i] == '<=':
+                if self.optimization_type == 'min':
+                    dual.variable_signs.append('<=')
+                else:
+                    dual.variable_signs.append('>=') 
         
+        # setting the dual model constraints signs
+        for i in range(dual.constraint_num):
+            if self.variable_signs[i] == 'free':
+                dual.constraint_signs[i] = '='
+            elif self.variable_signs[i] == '>=':
+                if self.optimization_type == 'min':
+                    dual.constraint_signs[i] = '<='
+                else:
+                    dual.constraint_signs[i] = '>='
+            elif self.variable_signs[i] == '<=':
+                if self.optimization_type == 'min':
+                    dual.constraint_signs[i] = '>='
+                else:
+                    dual.constraint_signs[i] = '<='
         return dual
     
     def print_model(self):
         # printing the objective function
-        print("\nmax z = " if self.type == 'max' else "\nmin z = ", end='')
+        print("max z = " if self.optimization_type == 'max' else "min z = ", end='')
         
-        for i in range(self.variable_num):
-            if i+1 < self.variable_num:
-                print(f"{self.c_vector[i]}x{i+1} + ", end='')
-            else:
-                print(f"{self.c_vector[i]}x{i+1}", end='')
+        str = "".join([f"{' +' if val > 0 else ' -'} {abs(val)}{'x' if self.type == 'primal' else 'y'}{i+1}" for i, val in enumerate(self.c_vector)])
+        print(str[1:])
         
         # printing the constraints
-        print("\ns.t.")
-
-        for i in range(self.constraint_num):
-            for j in range(self.variable_num):
-                if j+1 < self.variable_num:
-                    print(f"{self.a_matrix[i][j]}x{j+1} + ", end='')
-                else:
-                    print(f"{self.a_matrix[i][j]}x{j+1} ", end='')
-            print(f"{self.constraint_signs[i]} {self.b_vector[i]}")
-        
+        print("s.t.")
+        lines = []
+        for i, row in enumerate(self.a_matrix):
+            str = "".join([f"{' +' if val > 0 else ' -'} {abs(val)}{'x' if self.type == 'primal' else 'y'}{i+1}" for i, val in enumerate(row)])
+            str += ' '
+            str += f"{self.constraint_signs[i]} {self.b_vector[i]}"
+            lines.append(str)
+        print("\n".join(lines))
 
         # printing the sign of the variables
         non_negative_variables = []
@@ -124,16 +181,25 @@ class LinearModel:
                 else:
                     print("<= 0", end='')
         for i in range(len(free_variables)):
-            print(f"{free_variables[i]} is free", end=' ')
+            print(f"{free_variables[i]} URS", end=' ')
             if i != len(free_variables) - 1:
                 print(', ', end='')
-        if len(free_variables) > 0:
-                print("is free", end='')
         print()
 
 # example Usage
 model = LinearModel()
-model.test_example()
+if input("Do you want to enter your model? (y/n): ") == 'y':
+    model.input()
+else:
+    model.test_example()
+
+print('\nGiven Model:')
 model.print_model()
+
 dual = model.dual_calculator()
+
+print('\nNormalized Model:')
+model.print_model()
+
+print('\nDual Model:')
 dual.print_model()
