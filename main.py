@@ -14,6 +14,7 @@ class LinearModel:
         # constraints RHS
         self.b_vector = []
 
+        # variables and constraints signs
         self.constraint_signs = []
         self.variable_signs = []
 
@@ -39,6 +40,15 @@ class LinearModel:
         for i in range(self.variable_num):
             self.variable_signs.append(input(f"Enter the sign of x{i+1} (>=, free, <=): "))
 
+    def input_gui(self, optimization_type, variable_num, constraint_num, c_vector, a_matrix, constraint_signs, b_vector, variable_signs):
+        self.optimization_type = optimization_type
+        self.variable_num = variable_num
+        self.constraint_num = constraint_num
+        self.c_vector = c_vector
+        self.a_matrix = a_matrix
+        self.constraint_signs = constraint_signs
+        self.b_vector = b_vector
+        self.variable_signs = variable_signs
 
     def test_example(self):
         self.optimization_type = 'min'
@@ -135,25 +145,41 @@ class LinearModel:
     
     def print_model(self):
         # printing the objective function
-        print("max z = " if self.optimization_type == 'max' else "min z = ", end='')
+        print(self.obj_func_str())
+        # print("max z = " if self.optimization_type == 'max' else "min z = ", end='')
         
-        str = "".join([f"{' +' if val > 0 else ' -'} {abs(val)}{'x' if self.type == 'primal' else 'y'}{i+1}" for i, val in enumerate(self.c_vector)])
-        print(str[1:])
+        # str = "".join([f"{' +' if val > 0 else ' -'} {abs(val)}{'x' if self.type == 'primal' else 'y'}{i+1}" for i, val in enumerate(self.c_vector)])
+        # print(str[1:])
         
         # printing the constraints
         print("s.t.")
+        lines = self.constraints_str_list()
+        print("\n".join(lines))
+
+        # printing the sign of the variables
+        print(self.var_signs_str())
+
+    def constraints_str_list(self):
         lines = []
         for i, row in enumerate(self.a_matrix):
             str = "".join([f"{' +' if val > 0 else ' -'} {abs(val)}{'x' if self.type == 'primal' else 'y'}{i+1}" for i, val in enumerate(row)])
             str += ' '
             str += f"{self.constraint_signs[i]} {self.b_vector[i]}"
             lines.append(str)
-        print("\n".join(lines))
+        return lines
+    
+    def obj_func_str(self):
+        str = ""
+        str += "".join("max z =" if self.optimization_type == 'max' else "min z =")
+        str += "".join([f"{' +' if val > 0 else ' -'} {abs(val)}{'x' if self.type == 'primal' else 'y'}{i+1}" for i, val in enumerate(self.c_vector)])
+        return str
 
-        # printing the sign of the variables
+    def var_signs_str(self):
+        str = ''
         non_negative_variables = []
         non_positive_variables = []
         free_variables = []
+
         for i in range(len(self.variable_signs)):
             if self.variable_signs[i] == '>=':
                 non_negative_variables.append(f"x{i+1}")
@@ -161,45 +187,48 @@ class LinearModel:
                 non_positive_variables.append(f"x{i+1}")
             else:
                 free_variables.append(f"x{i+1}")
-        print('and ', end='')
+        
+        str += ''.join('and ')
+
         for i in range(len(non_negative_variables)):
-            print(f"{non_negative_variables[i]}", end=' ')
+            str += ''.join(f"{non_negative_variables[i]}")
             if i != len(non_negative_variables) - 1:
-                print(', ', end='')
+                str += ''.join(', ')
         if len(non_negative_variables) > 0:
                 if len(free_variables) > 0 or len(non_positive_variables) > 0:
-                    print(">= 0 and ", end='')
+                    str += ''.join(">= 0 and ")
                 else:
-                    print(">= 0", end='')
+                    str += ''.join(">= 0")
         for i in range(len(non_positive_variables)):
-            print(f"{non_positive_variables[i]}", end=' ')
+            str += ''.join(f"{non_positive_variables[i]}")
             if i != len(non_positive_variables) - 1:
-                print(', ', end='')
+                str += ''.join(', ')
         if len(non_positive_variables) > 0:
                 if len(free_variables) > 0:
-                    print("<= 0 and ", end='')
+                    str += ''.join("<= 0 and ")
                 else:
-                    print("<= 0", end='')
+                    str += ''.join("<= 0")
         for i in range(len(free_variables)):
-            print(f"{free_variables[i]} URS", end=' ')
+            str += ''.join(f"{free_variables[i]} URS")
             if i != len(free_variables) - 1:
-                print(', ', end='')
-        print()
+                str += ''.join(', ')
+        return str
 
-# example Usage
-model = LinearModel()
-if input("Do you want to enter your model? (y/n): ") == 'y':
-    model.input()
-else:
-    model.test_example()
 
-print('\nGiven Model:')
-model.print_model()
+# # example Usage
+# model = LinearModel()
+# if input("Do you want to enter your model? (y/n): ") == 'y':
+#     model.input()
+# else:
+#     model.test_example()
 
-dual = model.dual_calculator()
+# print('\nGiven Model:')
+# model.print_model()
 
-print('\nNormalized Model:')
-model.print_model()
+# dual = model.dual_calculator()
 
-print('\nDual Model:')
-dual.print_model()
+# print('\nNormalized Model:')
+# model.print_model()
+
+# print('\nDual Model:')
+# dual.print_model()
