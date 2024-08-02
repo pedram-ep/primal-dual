@@ -1,0 +1,1 @@
+self.free_regex = QRegularExpression(r".*")
